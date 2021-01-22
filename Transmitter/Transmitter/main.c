@@ -1,4 +1,4 @@
-#define F_CPU    10000000UL //para j�
+#define F_CPU    10000000UL
 
 #include <avr/io.h>
 #include <stdio.h>
@@ -6,9 +6,9 @@
 #include <stdint.h>
 #include <avr/interrupt.h> 
 #include <util/delay.h>
-#include <inttypes.h>									/* Include integer type header file */									/* Include standard library file */
-#include "MPU6050_res_define.h"							/* Include MPU6050 register define file */
-#include "I2C_Master_H_file.h"							/* Include I2C Master header file */
+#include <inttypes.h>									
+#include "MPU6050_res_define.h"							
+#include "I2C_Master_H_file.h"							
 
 float Acc_x,Acc_y,Acc_z,Temperature,Gyro_x,Gyro_y,Gyro_z;
 
@@ -23,8 +23,8 @@ float Acc_x,Acc_y,Acc_z,Temperature,Gyro_x,Gyro_y,Gyro_z;
 #define LEDerror 2
 #define IRQ 3
 
-#define CONFIGnrf      0x00 +0x20 //(soma-se 0x20 pois o comando W_REGISTER = 001X XXXX,
-#define EN_AA       0x01 +0x20 // sendo que XXXXX � o binario do address em que queremos escrever)
+#define CONFIGnrf      0x00 +0x20 //(soma-se 0x20 do comando W_REGISTER
+#define EN_AA       0x01 +0x20 
 #define EN_RXADDR   0x02 +0x20
 #define SETUP_AW    0x03 +0x20
 #define SETUP_RETR  0x04 +0x20
@@ -32,8 +32,8 @@ float Acc_x,Acc_y,Acc_z,Temperature,Gyro_x,Gyro_y,Gyro_z;
 #define RF_SETUP    0x06 +0x20
 #define STATUS      0x07 +0x20
 #define RX_ADDR_P0  0x0A +0x20
-#define TX_ADDR     0x10 +0x20 //(para ler os registos vamos subtrair 0x20 aos valores destes #defines
-#define RX_PW_P0    0x11 +0x20 //pois o comando R_REGISTER = 000X XXXX)
+#define TX_ADDR     0x10 +0x20 
+#define RX_PW_P0    0x11 +0x20 
 #define FIFO_STATUS 0x17 +0x20
 
 #define R_RX_PAYLOAD 0b01100001
@@ -42,35 +42,31 @@ float Acc_x,Acc_y,Acc_z,Temperature,Gyro_x,Gyro_y,Gyro_z;
 #define FLUSH_RX     0b11100010
 
 
-//#define END_RX_Byte2  0x69
-//#define END_RX_Byte1  0xED
-//#define END_RX_Byte0  0x75
 
 #define END_TX_Byte2  0x69
 #define END_TX_Byte1  0xED
 #define END_TX_Byte0  0x75
 
 
-//volatile uint16_t sample12bit = 1; //ser� que nao � necessario o valatile
+
 
 void config_portas_atmega()
 {
-	//PORTS:
+	
 	DDRB = 0;
 	DDRB |= (1<<SCK) | (1<<MOSI) | (1<<SS_NRF) | (1<<CE); //outputs
-	DDRB &= ~(1<<MISO); //input (vem do adc e do nrf)
+	DDRB &= ~(1<<MISO); //input 
 	
 	
 	PORTB = 0;
-	PORTB |= (1<<SS_NRF); //come�am inativos os salves selects
-	PORTB &= ~(1<<CE); //zero o pin Chip Enable (CE)
+	PORTB |= (1<<SS_NRF); //começa inativo o slave select
+	PORTB &= ~(1<<CE); //zero no Chip Enable (CE)
 	
 	DDRD = 0;	
-	DDRC |= (1<<LEDerror) | (1<<LEDstatus); //LED output para teste ( + LED para ver se o status disse que o TX_FIFO foi enviado)
-
+	DDRC |= (1<<LEDerror) | (1<<LEDstatus); //LEDs de status de envio ou falha
 	DDRD &= ~(1<<IRQ);
 
-	PORTC &= ~(1<<LEDstatus); //LED come�a desligado
+	PORTC &= ~(1<<LEDstatus);
 
 }
 
@@ -79,10 +75,10 @@ void config_spi_atmega()
 //SPI:
 
 	//SPCR |= (1<<SPIE) | (1<<SPE) | (0<<DORD) | (1<<MSTR) | (0<<CPOL) | (0<<CPHA) | (0<<SPR1) | (0<<SPR0); MODO 0
-	SPCR = 0b11010000; //SPIE com interrupt n�? assim sempre que l� mandamos fazer algo? SPE enable spi. DORD primeiro o MSB e no fim o LSB. MSTR definir para ser o master. Sck freq = Fosc/2
+	SPCR = 0b11010000;
 
 	//SPSR |= (1<<SPIF) | (0<<WCOL) | (1<<SPI2X);
-	SPSR = 0b10000001; //com a flag SPIF para sabermos quando terminou de enviar a data pelo SPDR. Sem colision flag (WCOL). Double SPI speed bit a 1 para a Sck freq = Fosc/2
+	SPSR = 0b10000001; 
 }
 
 
@@ -91,7 +87,7 @@ void config_spi_atmega()
 
 uint8_t spi_read(uint8_t junkdata)
 {
-	SPDR = junkdata; // Write data to SPI data register //Mandamos por que ordem
+	SPDR = junkdata; // Write data to SPI data register 
 	while(!(SPSR & (1<<SPIF)));		// Wait till transmission complete 
 	return(SPDR);
 }
@@ -99,7 +95,7 @@ uint8_t spi_read(uint8_t junkdata)
 
 void spi_write(uint8_t data)
 {
-	SPDR = data;					/* Write data to SPI data register */ //Mandamos por que ordem???
+	SPDR = data;					/* Write data to SPI data register */ 
 	while(!(SPSR & (1<<SPIF)));		/* Wait till transmission complete */
 }
 
@@ -109,7 +105,7 @@ void spi_write_x_bytes(char data[])
 	
 	int i;
 	
-	for(i=0;i<31;i++)
+	for(i=0;i<31;i++) //envia os 31 bytes
 	{
 		SPDR = data[i];
 		while(!(SPSR & (1<<SPIF)));		
@@ -126,10 +122,10 @@ void configuracao_do_nrf24L01_TX()
 	
 	PORTB &= ~(1<<SS_NRF); //SETUP_AW
 	spi_write(SETUP_AW);
-	spi_write(0b00000001); //3 bytes para RX e TX address (o minimo)
+	spi_write(0b00000001); //3 bytes para RX e TX address
 	PORTB |= (1<<SS_NRF);
 		
-	PORTB &= ~(1<<SS_NRF); //RX_ADDR_P0 no recetor address de 3 bytes
+	PORTB &= ~(1<<SS_NRF); //RX_ADDR_P0 address de 3 bytes
 	spi_write(RX_ADDR_P0);
 	spi_write(END_TX_Byte2);
 	spi_write(END_TX_Byte1);
@@ -177,13 +173,13 @@ void configuracao_do_nrf24L01_TX()
 
 	PORTB &= ~(1<<SS_NRF); //RX_PW_P0
 	spi_write(RX_PW_P0);
-	spi_write(0b00000001);  //1 bytes
+	spi_write(0b00011111);  //31 bytes
 	PORTB |= (1<<SS_NRF);
 	
 	
 	PORTB &= ~(1<<SS_NRF); //CONFIG
 	spi_write(CONFIGnrf);
-	spi_write(0b01011010); //CRC (des)ligado, Power UP, modo PTX, IRQ -> MASK_TX_DS  /* spi_write(0b01010010); //CRC ligado, Power UP, modo PTX //*/ 
+	spi_write(0b01011010); //CRC (des)ligado, Power UP, modo PTX, IRQ -> MASK_TX_DS  PTX
 	PORTB |= (1<<SS_NRF);
 	
 	_delay_ms(2); //tempo para entrar em standby após power up
@@ -262,7 +258,7 @@ void enviar_sample(char data[])
 	PORTB &= ~(1<<CE);
 								
 								
-								while ( (PIND & (1<<IRQ)) ) //enquanto fifo n�o for limpo (enviado)
+								while ( (PIND & (1<<IRQ)) ) //enquanto fifo nao for limpo (enviado)
 								{
 									PORTC &= ~(1<<LEDstatus);
 									PORTC |= (1<<LEDerror);
@@ -347,7 +343,7 @@ int main(void)
 		gy_text[30]=6;
 		gz_text[30]=7;
 		
-		_delay_us(100); //dar tempo para a leitura
+		_delay_us(100); 
 		enviar_sample(ax_text);
 		_delay_us(100);
 		enviar_sample(ay_text);

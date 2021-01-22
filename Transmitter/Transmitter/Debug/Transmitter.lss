@@ -495,7 +495,7 @@ char I2C_Read_Nack()										/* I2C read nack function */
 000002c6 <config_portas_atmega>:
 uint8_t spi_read(uint8_t junkdata)
 {
-	SPDR = junkdata; // Write data to SPI data register //Mandamos por que ordem
+	SPDR = junkdata; // Write data to SPI data register 
 	while(!(SPSR & (1<<SPIF)));		// Wait till transmission complete 
 	return(SPDR);
 }
@@ -527,7 +527,7 @@ uint8_t spi_read(uint8_t junkdata)
 
 void spi_write(uint8_t data)
 {
-	SPDR = data;					/* Write data to SPI data register */ //Mandamos por que ordem???
+	SPDR = data;					/* Write data to SPI data register */ 
      2ee:	8e bd       	out	0x2e, r24	; 46
 	while(!(SPSR & (1<<SPIF)));		/* Wait till transmission complete */
      2f0:	0d b4       	in	r0, 0x2d	; 45
@@ -548,7 +548,7 @@ void spi_write_x_bytes(char data[])
 	
 	int i;
 	
-	for(i=0;i<31;i++)
+	for(i=0;i<31;i++) //envia os 31 bytes
 	{
 		SPDR = data[i];
      300:	81 91       	ld	r24, Z+
@@ -562,7 +562,7 @@ void spi_write_x_bytes(char data[])
 	
 	int i;
 	
-	for(i=0;i<31;i++)
+	for(i=0;i<31;i++) //envia os 31 bytes
      30a:	e2 17       	cp	r30, r18
      30c:	f3 07       	cpc	r31, r19
      30e:	c1 f7       	brne	.-16     	; 0x300 <spi_write_x_bytes+0x8>
@@ -601,13 +601,13 @@ void configuracao_do_nrf24L01_TX()
 	spi_write(SETUP_AW);
      322:	83 e2       	ldi	r24, 0x23	; 35
      324:	0e 94 77 01 	call	0x2ee	; 0x2ee <spi_write>
-	spi_write(0b00000001); //3 bytes para RX e TX address (o minimo)
+	spi_write(0b00000001); //3 bytes para RX e TX address
      328:	81 e0       	ldi	r24, 0x01	; 1
      32a:	0e 94 77 01 	call	0x2ee	; 0x2ee <spi_write>
 	PORTB |= (1<<SS_NRF);
      32e:	2a 9a       	sbi	0x05, 2	; 5
 		
-	PORTB &= ~(1<<SS_NRF); //RX_ADDR_P0 no recetor address de 3 bytes
+	PORTB &= ~(1<<SS_NRF); //RX_ADDR_P0 address de 3 bytes
      330:	2a 98       	cbi	0x05, 2	; 5
 	spi_write(RX_ADDR_P0);
      332:	8a e2       	ldi	r24, 0x2A	; 42
@@ -708,8 +708,8 @@ void configuracao_do_nrf24L01_TX()
 	spi_write(RX_PW_P0);
      3ba:	81 e3       	ldi	r24, 0x31	; 49
      3bc:	0e 94 77 01 	call	0x2ee	; 0x2ee <spi_write>
-	spi_write(0b00000001);  //1 bytes
-     3c0:	81 e0       	ldi	r24, 0x01	; 1
+	spi_write(0b00011111);  //31 bytes
+     3c0:	8f e1       	ldi	r24, 0x1F	; 31
      3c2:	0e 94 77 01 	call	0x2ee	; 0x2ee <spi_write>
 	PORTB |= (1<<SS_NRF);
      3c6:	2a 9a       	sbi	0x05, 2	; 5
@@ -720,7 +720,7 @@ void configuracao_do_nrf24L01_TX()
 	spi_write(CONFIGnrf);
      3ca:	80 e2       	ldi	r24, 0x20	; 32
      3cc:	0e 94 77 01 	call	0x2ee	; 0x2ee <spi_write>
-	spi_write(0b01011010); //CRC (des)ligado, Power UP, modo PTX, IRQ -> MASK_TX_DS  /* spi_write(0b01010010); //CRC ligado, Power UP, modo PTX //*/ 
+	spi_write(0b01011010); //CRC (des)ligado, Power UP, modo PTX, IRQ -> MASK_TX_DS  PTX
      3d0:	8a e5       	ldi	r24, 0x5A	; 90
      3d2:	0e 94 77 01 	call	0x2ee	; 0x2ee <spi_write>
 	PORTB |= (1<<SS_NRF);
@@ -1017,7 +1017,7 @@ void enviar_sample(char data[])
      606:	29 98       	cbi	0x05, 1	; 5
 								
 								
-								while ( (PIND & (1<<IRQ)) ) //enquanto fifo n�o for limpo (enviado)
+								while ( (PIND & (1<<IRQ)) ) //enquanto fifo nao for limpo (enviado)
      608:	4b 9b       	sbis	0x09, 3	; 9
      60a:	08 c0       	rjmp	.+16     	; 0x61c <enviar_sample+0x42>
 								{
@@ -1034,7 +1034,7 @@ void enviar_sample(char data[])
 	PORTB &= ~(1<<CE);
 								
 								
-								while ( (PIND & (1<<IRQ)) ) //enquanto fifo n�o for limpo (enviado)
+								while ( (PIND & (1<<IRQ)) ) //enquanto fifo nao for limpo (enviado)
      618:	4b 99       	sbic	0x09, 3	; 9
      61a:	f8 cf       	rjmp	.-16     	; 0x60c <enviar_sample+0x32>
 									PORTC |= (1<<LEDerror);
@@ -1360,7 +1360,7 @@ int main(void)
      858:	00 c0       	rjmp	.+0      	; 0x85a <main+0x21a>
      85a:	00 00       	nop
 		
-		_delay_us(100); //dar tempo para a leitura
+		_delay_us(100); 
 		enviar_sample(ax_text);
      85c:	ce 01       	movw	r24, r28
      85e:	85 54       	subi	r24, 0x45	; 69

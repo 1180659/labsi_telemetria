@@ -17,13 +17,13 @@
 
 #define LEDstatus 5
 #define LEDerror 4
-#define LEDblink 2
+#define LEDblink 0
 
 #define IRQ 3
 
 
-#define CONFIGnrf   0x00 +0x20 //(soma-se 0x20 pois o comando W_REGISTER = 001X XXXX, 
-#define EN_AA       0x01 +0x20 // sendo que XXXXX � o binario do address em que queremos escrever)
+#define CONFIGnrf   0x00 +0x20 //(soma-se 0x20 é o comando de escrita W_REGISTER 
+#define EN_AA       0x01 +0x20 
 #define EN_RXADDR   0x02 +0x20
 #define SETUP_AW    0x03 +0x20
 #define SETUP_RETR  0x04 +0x20
@@ -31,8 +31,8 @@
 #define RF_SETUP    0x06 +0x20
 #define STATUS      0x07 +0x20
 #define RX_ADDR_P0  0x0A +0x20
-#define TX_ADDR     0x10 +0x20 //(para ler os registos vamos subtrair 0x20 aos valores destes #defines
-#define RX_PW_P0    0x11 +0x20 //pois o comando R_REGISTER = 000X XXXX)
+#define TX_ADDR     0x10 +0x20 //
+#define RX_PW_P0    0x11 +0x20 //
 #define FIFO_STATUS 0x17 +0x20
 
 #define R_RX_PAYLOAD 0b01100001
@@ -46,33 +46,32 @@
 #define END_RX_Byte0  0x75
 
 char buffer[31];
-volatile int count;
+int count;
 
 
 void config_portas_atmega()
 {
 	DDRB = 0;
-	DDRB |= (1<<SCK) | (1<<MOSI) | (1<<SS_NRF) | (1<<CE); //outputs
-	DDRB &= ~(1<<MISO); //input (vem do dac e do nrf)
+	DDRB |= (1<<SCK) | (1<<MOSI) | (1<<SS_NRF) | (1<<CE) | (1<<LEDblink); //outputs
+	DDRB &= ~(1<<MISO); //input 
 	
 	PORTB = 0;
-	PORTB |= (1<<SS_NRF); //come�am inativos os salves selects
-	PORTB &= ~(1<<CE); //zero o pin Chip Enable (CE)
+	PORTB |= (1<<SS_NRF); //começa inativo o SS
+	PORTB &= ~(1<<CE); //começa a zero o Chip enable
 	
 	
-	DDRC |= (1<<LEDerror) | (1<<LEDstatus) ; //LED output para teste e LED blink 1hz
-	DDRD |= (1<<LEDblink);
+	DDRC |= (1<<LEDerror) | (1<<LEDstatus); //LED output para status da comunicação
 	DDRD &= ~(1<<IRQ); //ler interrupt IRQ do RX_DS
 	PORTC &= ~(1<<LEDerror) | (1<<LEDstatus);
-	PORTC |= (1<<LEDblink);
+	
 
 	TCCR0A =0;
 	TCCR0A |= (1 << WGM01); //CTC MODE
 	TIMSK0 |= (1 << OCIE0A); //ISR COMP VECT
-	TCCR0B |= (1 << CS02) | (1 << CS00); //256 PRESCALER
+	TCCR0B |= (1 << CS01) | (1 << CS00); //1024 PRESCALER
 	OCR0A=200;
 
-	sei();
+	
 }
 
 
@@ -194,10 +193,10 @@ void config_spi_atmega()
 //SPI:
 
 	//SPCR |= (1<<SPIE) | (1<<SPE) | (0<<DORD) | (1<<MSTR) | (0<<CPOL) | (0<<CPHA) | (0<<SPR1) | (0<<SPR0);
-	SPCR = 0b11010000; //SPIE com interrupt n�? assim sempre que l� mandamos fazer algo? SPE enable spi. DORD primeiro o MSB e no fim o LSB. MSTR definir para ser o master. Sck freq = Fosc/2
+	SPCR = 0b11010000; //
 
 	//SPSR |= (1<<SPIF) | (0<<WCOL) | (1<<SPI2X);
-	SPSR = 0b10000001; //com a flag SPIF para sabermos quando terminou de enviar a data pelo SPDR (mas acho confuso o que est� no datasheet). Sem colision flag (WCOL). Double SPI speed bit a 1 para a Sck freq = Fosc/2
+	SPSR = 0b10000001; //com a flag SPIF para sabermos quando terminou de enviar a data pelo SPDR 
 }
 
 uint8_t spi_read(uint8_t junkdata)
@@ -215,7 +214,7 @@ void spi_read_X_bytes()  //tempo estimado de envio de 24us
 		
 		SPDR = 0xAA;
 		while(!(SPSR & (1<<SPIF)));		// Wait till transmission complete
-		buffer[i] = SPDR;															//byte 1
+		buffer[i] = SPDR;															
 	}
 	
 }
@@ -241,7 +240,7 @@ void configuracao_do_nrf24L01_RX()
 	PORTB |= (1<<SS_NRF);
 	
 	
-	PORTB &= ~(1<<SS_NRF); //RX_ADDR_P0 no recetor address de 3 bytes
+	PORTB &= ~(1<<SS_NRF); //RX_ADDR_P0 address de 3 bytes
 	spi_write(RX_ADDR_P0);
 	spi_write(END_RX_Byte2);
 	spi_write(END_RX_Byte1);
@@ -252,17 +251,17 @@ void configuracao_do_nrf24L01_RX()
 	
 	PORTB &= ~(1<<SS_NRF); //EN_AA nao se usa o Enhanced Shockburst
 	spi_write(EN_AA);
-	spi_write(0); //nao usa auto acknowledgement /*spi_write(0b00000001); //enable autoacknoladge do pipe0*/ spi_write(0b00000001); //enable autoacknoladge do pipe0*/
+	spi_write(0); //nao usa auto acknowledgement 
 	PORTB |= (1<<SS_NRF);
 	
 
 	PORTB &= ~(1<<SS_NRF); //EN_RXADDR
 	spi_write(EN_RXADDR);
-	spi_write(0b00000001); //enable do data pipe 0
+	spi_write(0b00000001); //enable data pipe 0
 	PORTB |= (1<<SS_NRF);
 
 
-	PORTB &= ~(1<<SS_NRF); //SETUP_RETR nao vamos usar o re-transmit
+	PORTB &= ~(1<<SS_NRF); //SETUP_RETR 
 	spi_write(SETUP_RETR);
 	spi_write(0); //Re-Transmit disabled
 	PORTB |= (1<<SS_NRF);
@@ -288,7 +287,7 @@ void configuracao_do_nrf24L01_RX()
 
 	PORTB &= ~(1<<SS_NRF); //RX_PW_P0
 	spi_write(RX_PW_P0);
-	spi_write(0b00000001); //1 bytes no RX payload do pipe 0
+	spi_write(0b00011111); //31 bytes no RX payload do pipe 0
 	PORTB |= (1<<SS_NRF);
 	
 	
@@ -304,7 +303,7 @@ void configuracao_do_nrf24L01_RX()
 	
 	PORTB &= ~(1<<SS_NRF); //CONFIG
 	spi_write(CONFIGnrf);
-	spi_write(0b00110011); //CRC (des)ligado, Power UP, IRQ -> RX_DS, PRIM_RX = 1 ->  modo PR //spi_write(0b00111011); //CRC ligado, Power UP, IRQ -> RX_DS, PRIM_RX = 1 -> modo PRX //*/ X
+	spi_write(0b00110011); //CRC (des)ligado, Power UP, IRQ -> RX_DS, PRIM_RX = 1
 	PORTB |= (1<<SS_NRF);
 	
 	_delay_ms(2); //tempo para entrar em standby após power up
@@ -472,7 +471,7 @@ ISR(TIMER0_COMPA_vect)
 {
 	if (count == 25)
 	{
-		PORTD ^= (1<<LEDblink);
+		PORTB ^= (1<<LEDblink);
 		count=0;
 	}
 	else
